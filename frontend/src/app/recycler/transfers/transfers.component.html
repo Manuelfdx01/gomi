@@ -1,0 +1,77 @@
+<div class="page">
+
+  <div class="page-header">
+    <div>
+      <h2>Mis traslados</h2>
+      <p>Historial completo de traslados asignados.</p>
+    </div>
+
+    <button class="btn btn-outline" (click)="loadTransfers()">
+      🔄 Actualizar
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div class="state-card" *ngIf="loading">
+    <div class="spinner"></div>
+    <span>Cargando traslados...</span>
+  </div>
+
+  <!-- Error -->
+  <div class="state-card error-state" *ngIf="!loading && error">
+    <div class="empty-icon">⚠️</div>
+    <h3>Error al cargar traslados</h3>
+    <p>{{ error }}</p>
+    <button class="btn btn-primary" (click)="loadTransfers()">Reintentar</button>
+  </div>
+
+  <!-- Empty -->
+  <div class="state-card empty" *ngIf="!loading && !error && transfers.length === 0">
+    <h3>Sin traslados</h3>
+    <p>Aún no tienes traslados registrados.</p>
+  </div>
+
+  <!-- List -->
+  <div class="transfers-list" *ngIf="!loading && !error && transfers.length > 0">
+
+    <div *ngFor="let t of transfers" class="transfer-card">
+
+      <div class="card-header">
+        <div class="card-title">
+          <h3>{{ t.origin_point.name }}</h3>
+          <span class="card-sub">→ {{ t.target_point.name }}</span>
+        </div>
+        <span class="badge" [ngClass]="statusClass(t.status)">
+          {{ statusLabel(t.status) }}
+        </span>
+      </div>
+
+      <div class="card-meta">
+        <span>♻️ {{ t.waste_type }}</span>
+        <span>📏 {{ t.distance_km }} km</span>
+        <span>🕐 {{ timeAgo(t.created_at) }}</span>
+      </div>
+
+      <div class="route-block">
+        <div class="route-item">
+          <span class="route-dot origin"></span>
+          <span>{{ t.origin_point.address }}</span>
+        </div>
+        <div class="route-line"></div>
+        <div class="route-item">
+          <span class="route-dot dest"></span>
+          <span>{{ t.target_point.address }}</span>
+        </div>
+      </div>
+
+      <div class="card-actions" style="margin-top: 10px;">
+        <button class="btn btn-outline btn-sm" (click)="openOSM(t)">
+          🗺️ Ver mapa
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

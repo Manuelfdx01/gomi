@@ -1,0 +1,228 @@
+<!-- ── Loading State ── -->
+<div class="rcy-loading" *ngIf="loading">
+  <div class="spinner"></div>
+  <span>Cargando tu panel...</span>
+</div>
+
+<!-- ── Error State ── -->
+<div class="rcy-error" *ngIf="error && !loading">
+  <div class="error-icon">⚠️</div>
+  <h3>No fue posible cargar el panel</h3>
+  <p>{{ error }}</p>
+  <button class="btn btn-primary" (click)="loadDashboard()">Reintentar</button>
+</div>
+
+<!-- ── MAIN DASHBOARD ── -->
+<div class="rcy-dashboard" *ngIf="!loading && !error">
+
+  <!-- ════════════════════════════════════════
+       HERO HEADER
+       ════════════════════════════════════════ -->
+  <div class="hero-header">
+    <div class="hero-left">
+      <span class="eyebrow">Panel del reciclador</span>
+      <h1 class="hero-title">¡Hola, {{ auth.getUser()?.username }}! 👋</h1>
+      <p class="hero-sub">Gestiona tus traslados y consulta tu actividad del día.</p>
+    </div>
+
+    <button
+      class="availability-toggle"
+      [class.is-available]="dashboard?.is_available"
+      [disabled]="togglingAvailability"
+      (click)="toggleAvailability()">
+      <span class="avail-dot"></span>
+      <span class="avail-label">
+        {{ togglingAvailability ? 'Actualizando...' : (dashboard?.is_available ? 'Disponible' : 'No disponible') }}
+      </span>
+    </button>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       STATS GRID
+       ════════════════════════════════════════ -->
+  <div class="stats-row">
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap teal">🚛</div>
+      <div class="stat-body">
+        <span class="stat-label">Traslados hoy</span>
+        <span class="stat-value">{{ stats.completed_today }}</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap amber">📦</div>
+      <div class="stat-body">
+        <span class="stat-label">Pendientes</span>
+        <span class="stat-value">{{ stats.pending }}</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap green">📍</div>
+      <div class="stat-body">
+        <span class="stat-label">Km recorridos</span>
+        <span class="stat-value">{{ stats.distance_today }}</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap blue">🌱</div>
+      <div class="stat-body">
+        <span class="stat-label">Nivel</span>
+        <span class="stat-value">{{ stats.level }}</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ════════════════════════════════════════
+       CONTENT GRID
+       ════════════════════════════════════════ -->
+  <div class="content-grid">
+
+    <!-- ── Traslado activo ── -->
+    <div class="card-section trip-section">
+      <div class="section-head">
+        <h3 class="section-title">🚚 Traslado activo</h3>
+      </div>
+
+      <!-- Active trip -->
+      <ng-container *ngIf="currentTrip as trip; else noTrip">
+        <div class="active-trip-card">
+          <div class="trip-status-bar">
+            <span class="status-badge" [ngClass]="statusClass(trip.status)">
+              {{ statusLabel(trip.status) }}
+            </span>
+            <span class="trip-time">{{ timeAgo(trip.created_at) }}</span>
+          </div>
+
+          <div class="trip-route">
+            <div class="route-point origin">
+              <div class="route-dot green-dot"></div>
+              <div class="route-info">
+                <span class="route-label">Origen</span>
+                <strong class="route-name">{{ trip.origin_point.name }}</strong>
+                <span class="route-addr">{{ trip.origin_point.address }}</span>
+              </div>
+            </div>
+
+            <div class="route-line"></div>
+
+            <div class="route-point dest">
+              <div class="route-dot teal-dot"></div>
+              <div class="route-info">
+                <span class="route-label">Destino</span>
+                <strong class="route-name">{{ trip.target_point.name }}</strong>
+                <span class="route-addr">{{ trip.target_point.address }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="trip-meta-row">
+            <span class="meta-pill">♻️ {{ trip.waste_type }}</span>
+            <span class="meta-pill">📍 {{ trip.distance_km }} km</span>
+          </div>
+
+          <div class="trip-actions">
+            <button class="btn btn-outline btn-sm" (click)="openOSM(trip)">
+              🗺️ Abrir mapa
+            </button>
+            <button class="btn btn-success btn-sm" (click)="completeTransfer(trip.id)">
+              ✅ Completar traslado
+            </button>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-template #noTrip>
+        <div class="empty-state-card">
+          <div class="empty-icon">🚛</div>
+          <p class="empty-text">No tienes un traslado activo en este momento.</p>
+          <a routerLink="/reciclador/alertas" class="btn btn-primary btn-sm">
+            Ver alertas disponibles
+          </a>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- ── Alertas pendientes ── -->
+    <div class="card-section alerts-section">
+      <div class="section-head">
+        <h3 class="section-title">🚨 Alertas pendientes</h3>
+        <span class="count-badge" *ngIf="pendingAlerts.length > 0">
+          {{ pendingAlerts.length }}
+        </span>
+      </div>
+
+      <div class="alerts-list" *ngIf="pendingAlerts.length > 0; else noAlerts">
+        <div
+          class="alert-row"
+          *ngFor="let alert of pendingAlerts">
+
+          <div class="alert-priority-bar"
+            [style.background]="alert.priority === 'ALTA' ? '#EF5350' : alert.priority === 'MEDIA' ? '#FFA726' : '#2E7D32'">
+          </div>
+
+          <div class="alert-body">
+            <div class="alert-top">
+              <strong class="alert-name">{{ alert.origin_point.name }}</strong>
+              <span class="status-badge" [ngClass]="priorityClass(alert.priority)">
+                {{ priorityLabel(alert.priority) }}
+              </span>
+            </div>
+            <p class="alert-desc">
+              {{ alert.origin_point.capacity_pct }}% · {{ alert.waste_type }} · {{ alert.distance_km }} km
+            </p>
+            <button class="btn btn-primary btn-sm" (click)="acceptTransfer(alert.id)">
+              Aceptar traslado
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #noAlerts>
+        <div class="empty-state-card compact">
+          <div class="empty-icon">📭</div>
+          <p class="empty-text">No hay alertas pendientes.</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- ── Actividad reciente ── -->
+    <div class="card-section history-section full-width-card">
+      <div class="section-head">
+        <h3 class="section-title">📋 Actividad reciente</h3>
+      </div>
+
+      <div class="history-list" *ngIf="history.length > 0; else noHistory">
+        <div
+          class="history-row"
+          *ngFor="let trip of history">
+          <div class="history-route">
+            <div class="history-points">
+              <strong>{{ trip.origin_point.name }}</strong>
+              <span class="history-arrow">→</span>
+              <strong>{{ trip.target_point.name }}</strong>
+            </div>
+            <p class="history-meta">{{ trip.waste_type }} · {{ trip.distance_km }} km</p>
+          </div>
+          <div class="history-right">
+            <span class="status-badge" [ngClass]="statusClass(trip.status)">
+              {{ statusLabel(trip.status) }}
+            </span>
+            <span class="history-date">{{ formatDate(trip.resolved_at) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #noHistory>
+        <div class="empty-state-card compact">
+          <div class="empty-icon">📂</div>
+          <p class="empty-text">Aún no has realizado traslados.</p>
+        </div>
+      </ng-template>
+    </div>
+
+  </div>
+</div>
